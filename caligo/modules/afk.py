@@ -50,7 +50,7 @@ class AFK(module.Module):
         ~filters.bot & ~filters.channel & ~filters.service & filters.private
         | filters.mentioned
     )
-    async def on_message(self, ctx: command.Context, message: types.Message) -> None:
+    async def on_message(self, message: types.Message) -> None:
         # sanity check
         if message.from_user is None or message.from_user.is_bot:
             return
@@ -69,7 +69,9 @@ class AFK(module.Module):
                     reply_text = f"__I'm currently AFK!__\n**Duration:** `{duration}`"
                     if reason:
                         reply_text += f"\n**Reason:** `{reason}`"
-                    return await ctx.respond(reply_text, delete_after=10)
+                    rest = await message.reply(reply_text)
+                    await asyncio.sleep(5)
+                    await rest.delete()
 
     @command.desc("Set your AFK status")
     @command.alias("brb")
