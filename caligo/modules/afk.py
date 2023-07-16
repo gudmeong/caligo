@@ -29,7 +29,7 @@ class AFK(module.Module):
         else:
             return (setting, timedelta(0))
 
-    async def set_afk(self, afk: bool = False, reason: str = None) -> bool:
+    async def set_afk(self, afk: bool = False, reason: Optional[str] = None) -> bool:
         """Update the AFK setting in the database."""
         afk_setting = {"afk_setting": afk, "time": datetime.now()}
         if reason is not None:
@@ -41,9 +41,7 @@ class AFK(module.Module):
         ~filters.bot
         & ~filters.channel
         & ~filters.service
-        & filters.private
-        & filters.me
-        | filters.mentioned
+        & (filters.private | filters.mentioned)
     )
     async def on_message(self, message: types.Message) -> None:
         # sanity check
@@ -52,7 +50,7 @@ class AFK(module.Module):
 
         afk_setting, _ = await self.get_afk_status()
         if afk_setting and afk_setting.get("afk_setting", False):
-            if message.outgoing:
+            if message.from_user.id == self.bot.uid and message.outgoing:
                 await self.set_afk(False)
                 rest = await message.reply("__You are no longer AFK!__")
                 await asyncio.sleep(5)
