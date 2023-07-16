@@ -37,7 +37,6 @@ class AFK(module.Module):
         await self.db.update_one({"_id": 0}, {"$set": afk_setting}, upsert=True)
         return afk
 
-    @listener.filters(filters.outgoing)
     async def on_outgoing(self, message: types.Message) -> None:
         afk_setting, _ = await self.get_afk_status()
         if afk_setting and afk_setting.get("afk_setting", False):
