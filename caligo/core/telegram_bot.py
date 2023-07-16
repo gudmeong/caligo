@@ -255,6 +255,7 @@ class TelegramBot(CaligoBase):
             filt.new_chat_members | filt.left_chat_member,
             group=1,
         )
+        self.update_module_event("outgoing", MessageHandler, filters=filt.outgoing)
         if self.helper_initialized:
             self.update_helper_event("callback_query", CallbackQueryHandler)
             self.update_helper_event("inline_query", InlineQueryHandler)

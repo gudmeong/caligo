@@ -38,7 +38,7 @@ class AFK(module.Module):
         return afk
 
     @listener.filters(filters.outgoing)
-    async def on_message(self, message: types.Message) -> None:
+    async def on_outgoing(self, message: types.Message) -> None:
         afk_setting, _ = await self.get_afk_status()
         if afk_setting and afk_setting.get("afk_setting", False):
             await self.set_afk(False)
