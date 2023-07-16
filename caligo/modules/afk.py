@@ -41,7 +41,7 @@ class AFK(module.Module):
     async def on_outgoing(self, message: types.Message) -> None:
         afk_setting, _ = await self.get_afk_status()
         if afk_setting and afk_setting.get("afk_setting", False):
-            await self.set_afk(False)
+            await self.set_afk(False, reason=None)
             rest = await message.reply("__You are no longer AFK!__")
             await asyncio.sleep(5)
             await rest.delete()
@@ -63,29 +63,24 @@ class AFK(module.Module):
             if await self.cache.exceeded(user_id):
                 # User has exceeded rate limit, do not send AFK message
                 return
-            else:
-                # User has not exceeded rate limit, increment the rate limit and send AFK message
-                await self.cache.increment(user_id)
-                afk_duration = datetime.now() - afk_setting["time"]
-                if user_id != self.bot.uid:
-                    reason = afk_setting.get("reason", "No reason provided")
-                    duration = format_duration_td(afk_duration)
-                    reply_text = f"__I'm currently AFK!__\n**Duration:** `{duration}`"
-                    if reason:
-                        reply_text += f"\n**Reason:** `{reason}`"
-                    rest = await message.reply(reply_text)
-                    await asyncio.sleep(5)
-                    await rest.delete()
+
+            # User has not exceeded rate limit, increment the rate limit and send AFK message
+            await self.cache.increment(user_id)
+            afk_duration = datetime.now() - afk_setting["time"]
+            if user_id != self.bot.uid:
+                reason = afk_setting.get("reason", "No reason provided")
+                duration = format_duration_td(afk_duration)
+                reply_text = f"__I'm currently AFK!__\n**Duration:** `{duration}`"
+                if reason:
+                    reply_text += f"\n**Reason:** `{reason}`"
+                rest = await message.reply(reply_text)
+                await asyncio.sleep(5)
+                await rest.delete()
 
     @command.desc("Set your AFK status")
     @command.alias("brb")
     @command.usage("afk [reason] or leave it empty", optional=True)
     async def cmd_afk(self, ctx: command.Context) -> str:
-        afk_setting, _ = await self.get_afk_status()
-        if afk_setting and afk_setting.get("afk_setting", False):
-            await self.set_afk(False, reason=False)
-            return await ctx.respond("__You are no longer AFK!__", delete_after=5)
-        else:
-            reason = ctx.input if ctx.input else None
-            await self.set_afk(True, reason)
-            return await ctx.respond("__You are now AFK!__", delete_after=5)
+        reason = ctx.input or None
+        await self.set_afk(True, reason)
+        return await ctx.respond("__You are now AFK!__", delete_after=5)
