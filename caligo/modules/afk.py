@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional, Tuple
 
 from pyrogram import filters, types
 
@@ -20,18 +20,14 @@ class AFK(module.Module):
         self.db = self.bot.db[self.name.upper()]
         self.cache = CacheLimiter(ttl=60, max_value=3)
 
-    async def get_afk_setting(self) -> Optional[Dict[str, any]]:
-        """Query the database to retrieve the AFK setting."""
-        return await self.db.find_one({"_id": 0})
-
-    async def get_afk_duration(self) -> timedelta:
-        """Retrieve the AFK duration."""
-        setting = await self.get_afk_setting()
+    async def get_afk_status(self) -> Tuple[Optional[Dict[str, Any]], timedelta]:
+        """Query the database to retrieve the AFK setting and duration."""
+        setting = await self.db.find_one({"_id": 0})
         if setting and "time" in setting:
             duration = datetime.now() - setting["time"]
-            return duration
+            return (setting, duration)
         else:
-            return timedelta(0)
+            return (setting, timedelta(0))
 
     async def set_afk(self, afk: bool = False, reason: str = None) -> bool:
         """Update the AFK setting in the database."""
@@ -43,8 +39,8 @@ class AFK(module.Module):
 
     @listener.filters(filters.outgoing)
     async def on_message(self, message: types.Message) -> None:
-        afk = await self.get_afk_setting()
-        if afk and afk.get("afk_setting", False):
+        afk_setting, _ = await self.get_afk_status()
+        if afk_setting and afk_setting.get("afk_setting", False):
             await self.set_afk(False)
             rest = await message.reply("__You are no longer AFK!__")
             await asyncio.sleep(5)
@@ -65,11 +61,11 @@ class AFK(module.Module):
         else:
             # User has not exceeded rate limit, increment the rate limit and send AFK message
             await self.cache.increment(user_id)
-            afk = await self.get_afk_setting()
-            if afk and afk.get("afk_setting", False):
+            afk_setting, afk_duration = await self.get_afk_status()
+            if afk_setting and afk_setting.get("afk_setting", False):
                 if user_id != self.bot.uid:
-                    reason = afk.get("reason", "No reason provided")
-                    duration = format_duration_td(await self.get_afk_duration())
+                    reason = afk_setting.get("reason", "No reason provided")
+                    duration = format_duration_td(afk_duration)
                     reply_text = f"__I'm currently AFK!__\n**Duration:** `{duration}`"
                     if reason:
                         reply_text += f"\n**Reason:** `{reason}`"
@@ -79,8 +75,8 @@ class AFK(module.Module):
     @command.alias("brb")
     @command.usage("afk [reason] or leave it empty", optional=True)
     async def cmd_afk(self, ctx: command.Context) -> str:
-        afk = await self.get_afk_setting()
-        if afk and afk.get("afk_setting", False):
+        afk_setting, _ = await self.get_afk_status()
+        if afk_setting and afk_setting.get("afk_setting", False):
             await self.set_afk(False, reason=False)
             return await ctx.respond("__You are no longer AFK!__", delete_after=5)
         else:
