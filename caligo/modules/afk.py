@@ -38,7 +38,11 @@ class AFK(module.Module):
         return afk
 
     @listener.filters(
-        ~filters.bot & ~filters.channel & ~filters.service & filters.private
+        ~filters.bot
+        & ~filters.channel
+        & ~filters.service
+        & filters.private
+        & filters.me
         | filters.mentioned
     )
     async def on_message(self, message: types.Message) -> None:
