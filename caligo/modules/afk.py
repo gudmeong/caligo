@@ -41,9 +41,20 @@ class AFK(module.Module):
         afk_setting, _ = await self.get_afk_status()
         if afk_setting and afk_setting.get("afk_setting", False):
             await self.set_afk(False, reason=None)
-            rest = await message.reply("__You are no longer AFK!__")
+
+            # Retrieve the tag count from the database
+            tag_count = afk_setting.get("tag_count", 0)
+
+            # Display the tag count
+            reply_text = f"__You are no longer AFK!__\n**Tag Count:** `{tag_count}`"
+            rest = await message.reply(reply_text)
             await asyncio.sleep(5)
             await rest.delete()
+
+            # Reset the tag count in the database
+            await self.db.update_one(
+                {"_id": 0}, {"$set": {"tag_count": 0}}, upsert=True
+            )
 
     @listener.filters(
         ~filters.bot
@@ -75,6 +86,12 @@ class AFK(module.Module):
                 rest = await message.reply(reply_text)
                 await asyncio.sleep(5)
                 await rest.delete()
+
+            # Increment the tag counter and store it in the database
+            tag_count = afk_setting.get("tag_count", 0) + 1
+            await self.db.update_one(
+                {"_id": 0}, {"$set": {"tag_count": tag_count}}, upsert=True
+            )
 
     @command.desc("Set your AFK status")
     @command.alias("brb")
